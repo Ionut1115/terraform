@@ -87,16 +87,47 @@ resource "azurerm_storage_account" "my_storage_account" {
   resource_group_name      = azurerm_resource_group.rg.name
   account_tier             = "Standard"
   account_replication_type = "LRS"
+}
+data "azurerm_client_config" "current" {}
+
+resource "azurerm_key_vault" "example" {
+  name                = "examplekv"
+  location            = "location"
+  resource_group_name = "group"
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+  sku_name            = "standard"
+
+  purge_protection_enabled = true
+}
+
+resource "azurerm_key_vault_key" "example" {
+  name         = "tfex-key"
+  key_vault_id = azurerm_key_vault.example.id
+  key_type     = "RSA"
+  key_size     = 2048
+  key_opts     = ["decrypt", "encrypt", "sign", "unwrapKey", "verify", "wrapKey"]
+}
 
 
-encryption {
-    key_source = "Microsoft.Keyvault"
-    key_vault_properties {
-      key_name     = "key-name"  # Key from Key Vault
-      key_vault_uri = "https://key-vault.vault.azure.net"  # Replace with Key Vault URI
-    }
+resource "azurerm_storage_account" "storage_account_good_1" {
+  name                     = "examplestor"
+  resource_group_name      = "group"
+  location                 = "location"
+  account_tier             = "Standard"
+  account_replication_type = "GRS"
+
+  identity {
+    type = "SystemAssigned"
   }
 }
+
+resource "azurerm_storage_account_customer_managed_key" "managed_key_good" {
+  storage_account_id = azurerm_storage_account.storage_account_good_1.id
+  key_vault_id       = azurerm_key_vault.example.id
+  key_name           = azurerm_key_vault_key.example.name
+  key_version = "1"
+}
+
 # Create virtual machine
 resource "azurerm_linux_virtual_machine" "my_terraform_vm" {
   name                  = "myVM"
