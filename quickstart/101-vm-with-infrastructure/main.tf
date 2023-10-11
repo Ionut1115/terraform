@@ -89,6 +89,14 @@ resource "azurerm_storage_account" "my_storage_account" {
   account_replication_type = "LRS"
 }
 
+encryption {
+    key_source = "Microsoft.Keyvault"
+    key_vault_properties {
+      key_name     = "key-name"  # Key from Key Vault
+      key_vault_uri = "https://key-vault.vault.azure.net"  # Replace with Key Vault URI
+    }
+  }
+
 # Create virtual machine
 resource "azurerm_linux_virtual_machine" "my_terraform_vm" {
   name                  = "myVM"
